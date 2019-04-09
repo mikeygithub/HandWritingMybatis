@@ -1,11 +1,13 @@
 package com.mikey.mybatis.core;
 
-import com.mikey.mybatis.pool.DataSourcePool;
+import com.mikey.mybatis.config.Configuration;
+import com.mikey.mybatis.parsers.SaxParsersConfigXML;
+import com.mikey.mybatis.pool.DataBaseConnPool;
 
 import java.sql.Connection;
+import java.sql.DriverManager;
 import java.sql.ResultSet;
 import java.sql.Statement;
-import java.util.Properties;
 
 /**
  * @Program: HandWritingMybatis
@@ -23,41 +25,24 @@ public class DBManager {
     /**
      * 连接对象
      */
-    private static DataSourcePool pool;
+    private static DataBaseConnPool pool;
 
+    /**
+     * 解析配置文件
+     */
     static {
-        Properties pros=new Properties();
-        try {
-            pros.load(Thread.currentThread().getContextClassLoader().getResourceAsStream("db.properties"));
-        }catch (Exception e){
-            e.printStackTrace();
-        }
-
-        conf=new Configuration();
-
-        conf.setDriver(pros.getProperty("driver"));
-        conf.setPoPackage(pros.getProperty("poPackage"));
-        conf.setPwd(pros.getProperty("pwd"));
-        conf.setSrcPath(pros.getProperty("srcPath"));
-        conf.setUrl(pros.getProperty("url"));
-        conf.setUser(pros.getProperty("user"));
-        conf.setUsingDB(pros.getProperty("usingDB"));
-        conf.setQueryClass(pros.getProperty("queryClass"));
-        conf.setPoolMaxSize(Integer.parseInt(pros.getProperty("poolMaxSize")));
-        conf.setPoolMinSize(Integer.parseInt(pros.getProperty("poolMinSize")));
+        conf = SaxParsersConfigXML.parsersConfiguation();
     }
-
     /**
      * 获取连接对象
      * @return
      */
     public static Connection getConnection(){
         if (pool==null){
-            pool=new DBConnPool();
+            pool=new DataBaseConnPool();
         }
         return pool.getConnection();
     }
-
     /**
      * 创建连接
      * @return
@@ -65,13 +50,12 @@ public class DBManager {
     public static Connection createConnection(){
         try {
             Class.forName(conf.getDriver());
-            return DriverManager.getConnection(conf.getUrl(),conf.getUser(),conf.getPwd());
+            return DriverManager.getConnection(conf.getUrl(),conf.getUsername(),conf.getPassword());
         }catch (Exception e){
             e.printStackTrace();
             return null;
         }
     }
-
     /**
      * 关闭传入的相关资源对象
      * @param resultSet
@@ -80,20 +64,18 @@ public class DBManager {
      */
     public static void close(ResultSet resultSet, Statement statement, Connection connection){
         try {
+            if (statement!=null){
+                statement.close();
+            }
+        }catch (Exception e){
+            e.printStackTrace();
+        }try {
             if (resultSet!=null){
                 resultSet.close();
             }
         }catch (Exception e){
             e.printStackTrace();
         }
-        try {
-            if (statement!=null){
-                statement.close();
-            }
-        }catch (Exception e){
-            e.printStackTrace();
-        }
-
         pool.close(connection);
     }
 
@@ -102,7 +84,7 @@ public class DBManager {
      * @param statement
      * @param connection
      */
-    public static void close(Statement statement,Connection connection){
+    public static void close(Statement statement, Connection connection){
         try {
             if (statement!=null){
                 statement.close();
@@ -128,6 +110,5 @@ public class DBManager {
     public static Configuration getConf(){
         return conf;
     }
-
 
 }
